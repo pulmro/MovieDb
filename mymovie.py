@@ -1,7 +1,7 @@
 #   -*- coding: utf-8 -*-
 
 import tmdb3, thread, os, urllib
-#import config
+import config
 
 class mymovie():
 	
@@ -28,7 +28,7 @@ class mymovie():
 		#runtime in it_IT locale is not set so we get from the en_US
 		tmdb3.set_locale('en','US')
 		self.runtime = tmdb3.Movie(theMovie.id).runtime
-		tmdb3.set_locale('it','IT')
+		tmdb3.set_locale(config.cfg['LANG'],config.cfg['LANG'])
 		if theMovie.releasedate:
 			self.year = theMovie.releasedate.year
 		if theMovie.poster:

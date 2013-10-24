@@ -23,7 +23,7 @@ except ParsingError, err:
     print 'Could not parse:', err
     print 'Using Default configuration'
 
-settings=['MOVIEPATH', 'DBPATH', 'LOOPTIME', 'SERVERPORT']
+settings=['MOVIEPATH', 'DBPATH', 'LOOPTIME', 'SERVERPORT', 'LANG']
 
 for option in settings:
 	if parser.has_option('settings', option):

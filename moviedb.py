@@ -8,10 +8,10 @@ from mymovie import mymovie
 class moviedb():
 	
 	def __init__(self):
-		# Creating TMDb object
+		# Initializing TMDb api
 		tmdb3.set_key(config.cfg['API_KEY'])
 		tmdb3.set_cache(engine='file', filename=config.cfg['CACHEPATH']+'/.tmdb3cache')
-		tmdb3.set_locale('it','it')
+		tmdb3.set_locale(config.cfg['LANG'],config.cfg['LANG'])
 		#Connecting to local database
 		self.database = sqliteIface(config.cfg['DBFILE'])
 
