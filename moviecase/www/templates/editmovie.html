@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Scheda Film</h2>
+<!--<div id="content">-->
+<div id="scheda">
+	<div class="headline">
+		<div class="title"><b>{{movie.title}}</b> di <i>{{movie.director}}</i> ({{movie.year}})</div>
+	</div>
+	<div class="more">
+		<img height=300 src='../api/movies/{{movie.movieid}}/poster'>
+		<p class="cast">{{movie.cast}}<br>Durata: {{movie.runtime}} min.</p>
+		<p class="overview">{{movie.overview}}</p>
+		<p class="cast">Nome File: {% for file in files %} {{file}} <br> {% endfor %} </p>
+	</div>
+</div>
+<div id="cerca">
+<h3>Cerca</h3>
+<p style="font-size:14px">Inserisci una nuova chiave di ricerca per scaricare la descrizione del film:</p>
+<form action='cerca' method='post'>
+<input type="text" name="query"/>
+<br><br>
+<input type="image" src="../static/images/search.png" height="48" width="48" name="q">
+<input type="hidden" name="id" value="{{movie.movieid}}">
+</form>
+<!--</div>-->
+</div>
+
+{% endblock %}

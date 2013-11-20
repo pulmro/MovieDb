@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+
+<script>
+$(document).ready(function() {
+	$('.movielist li:odd').css('background-color','#dadada');
+	$('.movielist div.more').hide();
+	$('.movielist div.actions').hide();
+	$('.movielist li').hover(
+		function() { $(this).children('div.headline').children('div.actions').show(); },
+		function() { $(this).children('div.headline').children('div.actions').hide(); }
+	);
+	$('.movielist li').click(
+		function() {
+			$(this).children('div.more').animate({opacity: 'toggle', height:'toggle'}, 'slow', 'swing');
+		}
+	);
+	$('#mydialog-overlay').hide();
+	$('#mydialog').hide();
+
+	$('#mydialog-overlay').click( 
+		function () {
+			$(this).hide();
+			$('#mydialog').hide();
+		}
+	);
+	$('.btn.edit a').click(
+		function() {
+			$('#mydialog form').children('input[name="id"]').val($(this).attr('fid'));
+			$('#mydialog form').children('input.fid').val($(this).attr('fid'));
+			$('#mydialog > p.filename').text($(this).attr('fname'));
+			$('#mydialog-overlay').show();
+			$('#mydialog').show();
+		}
+	);
+	$('.btn.close').click(
+		function() {
+			$('#mydialog').hide();
+			$('#mydialog-overlay').hide();
+		}
+	);
+});
+</script>
+
+<h2>Vista File</h2>
+
+<div id="mydialog-overlay"></div>
+<div id="mydialog">
+	<div class="btn close" tip="Chiudi"><img src="../static/images/remove.png"></div>
+	<h3>Modifica file</h3>
+	<p class="filename"></p>
+	<form action='edit.php' method='post'>
+		Seleziona dall'attuale elenco film:
+		<SELECT name="id">
+			<option value="0">Nessuno</option>
+			{% for movie in shortlistmovies %}
+			<option value={{movie.movieid}}\>{{movie.title}}</option>
+			{% endfor %}
+		</SELECT>
+		<input class="fid" type="hidden" name="fid" value=""/>
+		<input type="submit" value="&#10140;">
+	</form>
+		<p style="text-align:center">oppure</p>
+	<form action='cerca' method='post'>
+		Cerca: <input type="text" name="query" class="text"/>
+		<input class="fid" type="hidden" name="fid" value=""/>
+		<input type="submit" value="&#10140;">
+	</form>
+</div>
+
+<div class="tip"></div>
+
+<p class="cerca">Cerca: <input id="filter" type="text" name="query"/></p>
+
+<div class="movielist">
+	<h4>Files non ancora catalogati</h4>
+	
+	<ul>
+		{% for file in orphanfiles %}
+		<li><div class="headline">
+			<div class="title"><span style='font-weight:400'>{{file.basename}}</span></div>
+			<div class="actions">
+				<div class="btn edit" tip='Seleziona un film per il file'><a fid='{{file.rowid}}' fname='{{file.basename}}'><img height=22 src='../static/images/gtk-edit.png'></a></div>
+				<div class="btn" tip='Rimuovi il file dal catalogo'><a href='delete?fid={{file.rowid}}'><img height=22 src='../static/images/remove.png'></a></div>
+			</div></div>
+		</li>
+		{% endfor %}
+	</ul>
+</div>
+
+<div class="movielist">
+	<h4>Files rimossi dal catalogo</h4>
+	
+	<ul>
+		{% for file in removedfiles %}
+		<li><div class="headline">
+			<div class="title"><span style='font-weight:400'>{{file.basename}}</span></div>
+			<div class="actions">
+				<div class='btn' tip='Ripristina il film nel catalogo'><a href='restore?fid={{file.rowid}}'><img height=22 src='../static/images/edit-undo.png'></a></div>
+			</div></div>
+		</li>
+		{% endfor %}
+	</ul>
+</div>
+
+
+
+<div class="movielist">
+	<h4>Files nel catalogo film</h4>
+	
+	<ul>
+		{% for couple in moviefiles %}
+		<li><div class="headline">
+			<div class="title"><span style='font-weight:400'>{{couple[0].basename}}</span></div>
+			<div class="info"><span class='title'>{{couple[1].title}}</span><br> di <i>{{couple[1].director}}</i></div>
+			<div class="actions">
+				<div class='btn' tip='Scheda Film'><a href='editmovie?id={{couple[1].movieid}}'><img src='../static/images/gtk-edit.png'></a></div>
+				<div class='btn' tip='Elimina Film'><a href='delete?id={{couple[1].movieid}}&fid={{couple[0].rowid}}'><img src='../static/images/remove.png'></a></div>
+			</div></div>
+		</li>
+		{% endfor %}
+	</ul>
+</div>
+		
+
+{% endblock %}

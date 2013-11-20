@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Film nel database</h2>
+
+<div class="tip"></div>
+
+
+<div id="content">
+<div id="leftcolumn">
+	<ul id="latest">
+	<h4>Ultimi film inseriti</h4>
+	{% for movie in latestmovies %}
+	<li><a href='editmovie/{{movie.movieid}}'><img height=150 src='api/movies/{{movie.movieid}}/poster'><p>{{movie.title}}</p></a></li>
+	{% endfor %}
+	</ul>
+</div>
+
+<div id="rightcolumn">
+<p class="cerca">Cerca: <input id="filter" type="text" name="query"/></p>
+<div class="movielist index">
+<div class='orderby'>
+	<a href='index?sort=year'><img class='btn' height=22 tip='Ordina per data' src='../static/images/calendar.png'></a>
+	<a href='index'><img class='btn' height=22 tip='Ordina per nome' src='../static/images/byname.png'></a>
+</div>
+
+<ul>
+	{% for movie in allmovies %}
+	<li><div class="headline">
+		<div class="title"><span style='font-weight:400'>{{movie.title}}</span> di <i>{{movie.director}}</i> ({{movie.year}})</div>
+		<div class="actions">
+			<div class='btn' tip='Scheda Film'><a href='editmovie?id={{movie.movieid}}'><img src='../static/images/gtk-edit.png'></a></div>
+			<div class='btn' tip='Elimina Film'><a href='delete?id={{movie.movieid}}'><img src='../static/images/remove.png'></a></div>
+		</div>
+		</div>
+		<div class="more">
+			<img height=300 src='api/movies/{{movie.movieid}}/poster'>
+			<p class="cast">{{movie.cast}}<br>Durata: {{movie.runtime}} min.</p>
+			<p class="overview">{{movie.overview}}</p>
+			<p class="cast">Nome File: {% for filename in movie.filesname %} {{filename}} <br> {% endfor %}</p>
+		</div>
+	</li>
+	{% endfor %}
+</ul>
+
+</div>
+</div>
+
+</div>
+{% endblock %}

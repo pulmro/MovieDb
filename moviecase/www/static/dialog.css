@@ -1,0 +1,59 @@
+
+#mydialog-overlay {
+	z-index: 50;
+	background: rgba(0,0,0,0.5);
+	position: absolute;
+	top: 0;
+	width: 100%;
+	height: 100%;
+}
+
+#mydialog {
+	z-index: 100;
+	background: rgb(200,200,200);
+/*	color: #ffffff;*/
+	font-family: 'Open Sans', sans-serif;
+	font-weight: 300;
+	width: 400px;
+	margin: auto auto;
+	border: 4px solid white;
+	border-radius: 5px;
+	padding: 0px 5px;
+	position: absolute;
+	top: 40%;
+	left: 40%;
+}
+
+#mydialog h3 {
+	font-family: 'Open Sans', sans-serif;
+	font-weight: 400;
+	font-size: 20px;
+	text-shadow: 0px 1px 0px rgba(255, 255, 255, 0.75);
+	color: rgb(62, 62, 62);
+	text-align: center;
+	/*padding-bottom: 1em;*/
+}
+
+#mydialog p {
+	font-size: 13px;
+}
+
+#mydialog form {
+	text-align: center;
+	padding: 10px 0;
+}
+
+#mydialog input.text {
+	width: 90%;
+}
+
+#mydialog select {
+	width: 90%;
+}
+
+#mydialog .btn.close {
+	height: 22px;
+	width: 22px;
+	position: absolute;
+	right: 0;
+}
