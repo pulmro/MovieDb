@@ -2,7 +2,8 @@
 
 import os, mimetypes, re, tmdb3, sys, sched, logging
 import config
-from sqliteIface import sqliteIface
+#from sqliteIface import sqliteIface
+from sqliteiface import *
 from mymovie import mymovie
 
 class moviedb():
@@ -11,9 +12,12 @@ class moviedb():
 		# Initializing TMDb api
 		tmdb3.set_key(config.cfg['API_KEY'])
 		tmdb3.set_cache(engine='file', filename=config.cfg['CACHEPATH']+'/.tmdb3cache')
-		tmdb3.set_locale(config.cfg['LANG'],config.cfg['LANG'])
+		tmdb3.set_locale(config.cfg['LANG'],config.cfg['COUNTRY'])
 		#Connecting to local database
-		self.database = sqliteIface(config.cfg['DBFILE'])
+		self.db = sqlite_connect(config.cfg['DBFILE'])
+		#Welcome message
+		logging.info("MovieDb %s by Emanuele Bigiarini, 2012", config.cfg['version'])
+		logging.info("Released under GPL license.")
 
 	
 	def filtername(self, name):
@@ -30,6 +34,7 @@ class moviedb():
 		for bdir in config.cfg['BLACKLIST']:
 			bdir = os.path.realpath(config.cfg['MOVIEPATH']+"/"+bdir)
 			if os.path.commonprefix([dir, bdir]) == bdir:
+				logging.info("%s is blacklisted", dir)
 				flag=True
 		return flag
 	
@@ -38,7 +43,7 @@ class moviedb():
 		logging.info( "Scanning files...")
 		m = re.compile('video/.*')
 		path = config.cfg['MOVIEPATH']
-		d = self.database.getMoviespathdict()
+		d = getMoviespathdict(self.db)
 		newmovies = {}
 		for dirname, dirnames, filenames in os.walk(path):
 			for filename in filenames:
@@ -55,15 +60,16 @@ class moviedb():
 		if newmovies or d:
 			logging.info("Some new actions to run")
 			self.updatemovies(newmovies, d)
+		logging.info("Scanning in %d",config.cfg['LOOPTIME'])
 		sc.enter(config.cfg['LOOPTIME'], 1, self.scanfiles, (sc,))
 	
 	
 	def insertMovie(self, res, path, mMovie):
-		movieid = self.database.getmoviebyTMDbID(res[0].id)
+		movieid = getmoviebyTMDbID(self.db, res[0].id)
 		if not movieid:
 			mMovie.populate(res[0])
-			movieid = self.database.insertNewMovie(mMovie)
-		self.database.linkNewFileToMovie(path,mMovie.name, movieid)
+			movieid = insertNewMovie(self.db, mMovie)
+		linkNewFileToMovie(self.db, path, mMovie.name, movieid)
 
 	
 	""" This method search info for movies in newmovies and add them to the db
@@ -84,29 +90,36 @@ class moviedb():
 						else:
 							i=i-1
 				if (len(res) == 0):
-					self.database.insertOrphanFile(path, movie.name)
+					insertOrphanFile(self.db, path, movie.name)
 				else:
 					self.insertMovie(res, path, movie)
 			except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
 				logging.error( "HTTP error({0}): {1}".format(e.httperrno, e.response))
-				self.database.insertOrphanFile(path, movie.name)
+				insertOrphanFile(self.db, path, movie.name)
 			except:
 				logging.error( "Unexpected error: %s", sys.exc_info()[0])
 				raise
 		for path, idz in removemovies.iteritems():
 			logging.info("removing... %s",path.encode('utf-8'))
-			self.database.removeFile(path)
+			removeFile(self.db, path)
 	
 	
 	def updatedatabase(self):
-		tmdbIDList = self.database.getTMDbIds()
-		for tmdbID in tmdbIDList:
+		tmdbIDList = getTMDbIds(self.db)
+		for (tmdbID,) in tmdbIDList:
 			if tmdbID > 0:
 				mM = mymovie()
-				mM.populate( tmdb3.Movie(tmdbID))
-				self.database.updateMoviesByTMDbID(mM, tmdbID)
+				try:
+					mM.populate( tmdb3.Movie(tmdbID))
+					updateMoviesByTMDbID(self.db, mM, tmdbID)
+				except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
+					logging.error("Movie not updated.")
+					logging.error( "HTTP error({0}): {1}".format(e.httperrno, e.response))
+				except:
+					logging.error( "Unexpected error: %s", sys.exc_info()[0])
+					raise
 				
 	
 	def resetdatabase(self):
-		self.database.reset()
-		self.database.close()
+		reset(self.db)
+		self.db.close()
