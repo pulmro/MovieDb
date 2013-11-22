@@ -10,7 +10,7 @@
 	<ul id="latest">
 	<h4>Ultimi film inseriti</h4>
 	{% for movie in latestmovies %}
-	<li><a href='editmovie/{{movie.movieid}}'><img height=150 src='api/movies/{{movie.movieid}}/poster'><p>{{movie.title}}</p></a></li>
+	<li><a href='editmovie?id={{movie.movieid}}'><img height=150 src='api/movies/{{movie.movieid}}/poster'><p>{{movie.title}}</p></a></li>
 	{% endfor %}
 	</ul>
 </div>
