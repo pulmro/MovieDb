@@ -32,17 +32,23 @@ def getServerInfo():
 	return jsonify({'result':'OK', 'service':'MovieDb', 'version':config.cfg['version']})
 
 
+@app.route('/api/recentmovies', methods = ['GET'])
+def getRecentMovies():
+	dbcon = get_db()
+	return jsonify({'result': 'OK' , 'response': get5LatestMovies(dbcon)})
+
 @app.route('/api/movies', methods = ['GET'])
 def getMovieList():
 	if request.args:
 		
 		shortFlag = bool(request.args['short'][0])
 		sort = request.args['sort']
+		page = int(request.args['page']) if 'page' in request.args else 0
 		dbcon = get_db()
 		if sort == 'year':
-			MovieList = getMoviesSortedByYear(dbcon, shortFlag)
+			MovieList = getMoviesSortedByYear(dbcon, shortFlag, page)
 		elif sort == 'title':
-			MovieList = getMoviesSortedByTitle(dbcon, shortFlag)
+			MovieList = getMoviesSortedByTitle(dbcon, shortFlag, page)
 		else:
 			R = {'result':'KO','error':'Bad Request! Check your `sort` parameter.'}
 		R = {'result':'OK', 'response':MovieList}

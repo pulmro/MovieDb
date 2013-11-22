@@ -93,11 +93,17 @@ def getMovies(dbcon, flag, sort):
 	else:
 		return requestFetchAll(dbcon, 'SELECT movieid,title,director FROM movies ORDER BY {0}'.format(sort))
 
-def getMoviesSortedByTitle(dbcon, flag):
-	return getMovies(dbcon, flag, 'title')
+def getMoviesSortedByTitle(dbcon, flag, page=0):
+	if page == 0:
+		return getMovies(dbcon, flag, 'title')
+	else:
+		return getMovies(dbcon, flag, 'title')[20*(page-1):20*page]
 
-def getMoviesSortedByYear(dbcon, flag):
-	return getMovies(dbcon, flag, 'year')
+def getMoviesSortedByYear(dbcon, flag, page=0):
+	if page == 0:
+		return getMovies(dbcon, flag, 'year')
+	else:
+		return getMovies(dbcon, flag, 'year')[20*(page-1):20*page]
 
 def get5LatestMovies(dbcon):
 	files = requestFetchAll(dbcon, 'SELECT movieid FROM files WHERE movieid>0 ORDER BY rowid DESC')
