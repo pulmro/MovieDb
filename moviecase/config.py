@@ -1,4 +1,6 @@
-import os, logging
+import os
+import logging
+import sys
 from ConfigParser import RawConfigParser
 from ConfigParser import ParsingError
 #from collections import OrderedDict
@@ -13,54 +15,77 @@ class MultiOrderedDict(OrderedDict):
 """
 
 """Start Logging"""
-logging.basicConfig(filename='MovieDb.log', level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(filename='MovieDb.log', level=logging.INFO,
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-cfg={'API_KEY':'22f63eaeba327fde7b8f6f5df3ff3e8f', 'MOVIEPATH':'/data/Video/Film', 'DBPATH':'/home/emanuele/devel/moviedb/data', 'LOOPTIME':60, 'BLACKLIST':[], 'SERVERPORT':8000, 'LANG':'en','COUNTRY':'US'}
+cfg = {
+    'API_KEY':'22f63eaeba327fde7b8f6f5df3ff3e8f',
+    'MOVIEPATH':'/data/Video/Film',
+    'DBPATH':'/home/emanuele/devel/moviedb/data',
+    'LOOPTIME':60,
+    'BLACKLIST':[],
+    'SERVERPORT':8000,
+    'LANG':'en',
+    'COUNTRY':'US'
+}
 
-cfg['version']=0.1
+cfg['version'] = 0.1
 
 try:
-	#parser = RawConfigParser(dict_type=MultiOrderedDict)
-	parser = RawConfigParser()
-	configFilePath = os.path.dirname(os.path.realpath(__file__))+'/config'
-	parser.read(configFilePath)
+    #parser = RawConfigParser(dict_type=MultiOrderedDict)
+    parser = RawConfigParser()
+    configFilePath = os.path.dirname(os.path.realpath(__file__))+'/config'
+    parser.read(configFilePath)
 except ParsingError, err:
     print 'Could not parse:', err
     print 'Using Default configuration'
 
-settings=['MOVIEPATH', 'DBPATH', 'LOOPTIME', 'SERVERPORT', 'LANG', 'COUNTRY']
+settings = ['MOVIEPATH', 'DBPATH', 'LOOPTIME', 'SERVERPORT', 'LANG', 'COUNTRY']
 
 for option in settings:
-	if parser.has_option('settings', option):
-		cfg[option]=parser.get('settings', option)
-	else:
-		logging.warning("Using default configuration for %s", option)
-if parser.has_option('blacklist','folder'):
-	cfg['BLACKLIST']=parser.get('blacklist','folder').split(',')
+    if parser.has_option('settings', option):
+        cfg[option] = parser.get('settings', option)
+    else:
+        logging.warning("Using default configuration for %s", option)
+if parser.has_option('blacklist', 'folder'):
+    cfg['BLACKLIST'] = parser.get('blacklist', 'folder').split(',')
 
-cfg['DBFILE']=cfg['DBPATH']+'/movie.db'
-cfg['CACHEPATH']=cfg['DBPATH']+'/tmp'
+cfg['DBFILE'] = cfg['DBPATH']+'/movie.db'
+cfg['CACHEPATH'] = cfg['DBPATH']+'/tmp'
 cfg['LOOPTIME'] = float(cfg['LOOPTIME'])
 
 if not os.path.isdir(cfg['DBPATH']):
-	try:
-		os.mkdir(cfg['DBPATH'])
-		os.mkdir(cfg['CACHEPATH'])
-	except OSError as e:
-		logging.error( "I/O error({0}): {1}".format(e.errno, e.strerror) )
-	except:
-		logging.error("Unexpected error: %s", sys.exc_info()[0])
-		raise
+    try:
+        os.mkdir(cfg['DBPATH'])
+        os.mkdir(cfg['CACHEPATH'])
+    except OSError as e:
+        logging.error("I/O error({0}): {1}".format(e.errno, e.strerror) )
+    except:
+        logging.error("Unexpected error: %s", sys.exc_info()[0])
+        raise
 
 if not os.path.isdir(cfg['CACHEPATH']):
-	try:
-		os.mkdir(cfg['CACHEPATH'])
-	except OSError as e:
-		logging.error( "I/O error({0}): {1}".format(e.errno, e.strerror))
-	except:
-		logging.error("Unexpected error:%s", sys.exc_info()[0])
-		raise
+    try:
+        os.mkdir(cfg['CACHEPATH'])
+    except OSError as e:
+        logging.error("I/O error({0}): {1}".format(e.errno, e.strerror))
+    except:
+        logging.error("Unexpected error:%s", sys.exc_info()[0])
+        raise
+
 
 def printCurrentSettings():
-	for key in cfg:
-		logging.info("%s : %s",key,cfg[key])
+    for key in cfg:
+        logging.info("%s : %s", key, cfg[key])
+
+
+def is_blacklisted(directory):
+    """Check if directory is blacklisted or child of a blacklisted one."""
+    dir_path = os.path.realpath(directory)
+    flag = False
+    for bl_dir in cfg['BLACKLIST']:
+        bl_dir_path = os.path.realpath(cfg['MOVIEPATH']+"/"+bl_dir)
+        if os.path.commonprefix([dir_path, bl_dir_path]) == bl_dir_path:
+            logging.info("%s is blacklisted", dir_path)
+            flag = True
+    return flag
