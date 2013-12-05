@@ -192,13 +192,13 @@ def getTMDbIds(dbcon):
     return res
 
 
-def getMoviespathdict(dbcon):
+def getMoviesPathDict(dbcon):
     d = {}
     curs = dbcon.cursor()
     curs.execute('SELECT filepath,movieid FROM files')
     row = curs.fetchone()
     while row:
-        d[row[0]]=row[1]
+        d[row[0]] = row[1]
         row = curs.fetchone()
     curs.close()
     return d

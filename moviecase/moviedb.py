@@ -37,59 +37,58 @@ class MovieDb():
         (new_movies, deleted_movies) = self.scan_files()
         if new_movies or deleted_movies:
             logging.info("Some new actions to run")
-        self.update_movies(new_movies)
+        self.get_movies(new_movies)
         self.remove_movies(deleted_movies)
         scheduler.enter(config.cfg['LOOPTIME'], 1, self.loop, (scheduler,))
         logging.info("Scanning in %d", config.cfg['LOOPTIME'])
 
     def scan_files(self):
-        """Scan for video files in the path, comparing with the db new files and removed"""
+        """Scan for video files in the path comparing with the db, and returns new files and removed"""
         logging.info("Scanning files...")
         m = re.compile('video/.*')
         path = config.cfg['MOVIEPATH']
-        d = getMoviespathdict(self.db)
+        movies_in_db = getMoviesPathDict(self.db)
         newmovies = {}
         for dirname, dirnames, filenames in os.walk(path):
             for filename in filenames:
                 filepath = unicode(os.path.join(dirname, filename), "utf-8", "ignore")
                 file_type = mimetypes.guess_type(filepath)[0]
                 if file_type <> None and m.match(file_type) and not config.is_blacklisted(dirname):
-                    if filepath in d:
-                        d.pop(filepath)
+                    if filepath in movies_in_db:
+                        movies_in_db.pop(filepath)
                     else:
                         logging.info("Found %s", filepath.encode('utf-8'))
                         f_name = unicode(self.filtername(os.path.splitext(filename)[0]), "utf-8", "ignore")
                         newmovies[filepath] = mymovie(f_name)
-        #Now in d are just the files to be removed from the db
-        return newmovies, d
+        #Now movies_in_db just contains the files to be removed from the db
+        return newmovies, movies_in_db
 
-    def insertMovie(self, res, path, mMovie):
+    def insert_movie(self, res, path, my_movie):
         movieid = getmoviebyTMDbID(self.db, res[0].id)
         if not movieid:
-            mMovie.populate(res[0])
-            movieid = insertNewMovie(self.db, mMovie)
-        linkNewFileToMovie(self.db, path, mMovie.name, movieid)
+            my_movie.populate(res[0])
+            movieid = insertNewMovie(self.db, my_movie)
+        linkNewFileToMovie(self.db, path, my_movie.name, movieid)
 
-    def update_movies(self, new_movies):
+    def get_movies(self, new_movies):
         """Search info for movies in new_movies and add them to the db."""
+        #TODO: implement multi-threaded search for movies
         for path, movie in new_movies.iteritems():
             logging.info("searching for... %s", movie.name.encode('utf-8'))
             try:
                 res = tmdb3.searchMovie(movie.name.encode('utf-8'))
                 if len(res) == 0:
-                    arr = movie.name.split(' ')
-                    i = len(arr)/2
-                    while i > 0:
-                        logging.info("searching for... %s", ' '.join(arr[0:i]).encode('utf-8'))
-                        res = tmdb3.searchMovie(' '.join(arr[0:i]).encode('utf-8'))
-                        if len(res) > 0:
-                            i = 0
-                        else:
-                            i=i-1
+                    words = movie.name.split(' ')
+                    strings_to_test = [' '.join(words[0:i]).encode('utf-8') for i in range(len(words), 0, -1)]
+                    i = 1
+                    while len(res) == 0:
+                        logging.info("searching for... %s", strings_to_test[i])
+                        res = tmdb3.searchMovie(strings_to_test[i])
+                        i += 1
                 if len(res) == 0:
                     insertOrphanFile(self.db, path, movie.name)
                 else:
-                    self.insertMovie(res, path, movie)
+                    self.insert_movie(res, path, movie)
             except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
                 logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
                 insertOrphanFile(self.db, path, movie.name)
