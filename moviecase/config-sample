@@ -1,0 +1,15 @@
+[settings]
+# DBPATH is absolute path where you want to save the db file, must be writeable by the user who runs moviecase
+DBPATH=
+# MOVIEPATH is absolute path of the folder where are your movie files
+MOVIEPATH=
+LOOPTIME=3600
+LANG=it
+COUNTRY=it
+
+[blacklist]
+# folder is comma separated list of folder name (in the MOVIEPATH) you want to skip in the search for movie files
+# Avoid space between folders, this configuration
+# folder = Serie TV,Breaking Bad,The Wire
+# will skip folders named "Serie Tv", "Breaking Bad", etc.
+folder=
