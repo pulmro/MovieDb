@@ -19,26 +19,28 @@ logging.basicConfig(filename='MovieDb.log', level=logging.INFO,
                     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 cfg = {
-    'API_KEY':'22f63eaeba327fde7b8f6f5df3ff3e8f',
-    'MOVIEPATH':'/data/Video/Film',
-    'DBPATH':'/home/emanuele/devel/moviedb/data',
-    'LOOPTIME':60,
-    'BLACKLIST':[],
-    'SERVERPORT':8000,
-    'LANG':'en',
-    'COUNTRY':'US'
+    'API_KEY': '22f63eaeba327fde7b8f6f5df3ff3e8f',
+    'MOVIEPATH': '',
+    'DBPATH': '',
+    'LOOPTIME': 60,
+    'BLACKLIST': [],
+    'SERVERPORT': 8000,
+    'LANG': 'en',
+    'COUNTRY': 'US',
+    'version': '0.1'
 }
 
-cfg['version'] = 0.1
 
 try:
     #parser = RawConfigParser(dict_type=MultiOrderedDict)
     parser = RawConfigParser()
     configFilePath = os.path.dirname(os.path.realpath(__file__))+'/config'
-    parser.read(configFilePath)
-except ParsingError, err:
-    print 'Could not parse:', err
-    print 'Using Default configuration'
+    parser.readfp(open(configFilePath))
+except (ParsingError, IOError) as err:
+    print 'Could not parse any configuration file:', err
+    print 'Look at the config-sample to make yours.'
+    print 'Exiting...'
+    sys.exit()
 
 settings = ['MOVIEPATH', 'DBPATH', 'LOOPTIME', 'SERVERPORT', 'LANG', 'COUNTRY']
 
