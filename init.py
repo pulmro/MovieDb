@@ -1,6 +1,11 @@
 #   -*- coding: utf-8 -*-
 
-import getopt, sys, sched, time, thread, logging
+import getopt
+import sys
+import sched
+import time
+import thread
+import logging
 
 from moviecase import config
 from moviecase.moviedb import MovieDb
@@ -41,7 +46,7 @@ def main(argv):
             s.enter(5, 1, mdb.loop, (s, ))
             try:
                 port = int(config.cfg['SERVERPORT'])
-                thread.start_new_thread(cherryserver.startServer, (port,))
+                thread.start_new_thread(cherryserver.start_server, (port,))
                 s.run()
             except KeyboardInterrupt:
                 logging.info("Exiting...")
