@@ -15,9 +15,9 @@ try:
     GREATER09 = True
     print "Flask is >= 0.9"
 except ImportError:
-    from flask import _request_ctx_stack as stack
-    GREATER09 = False
-    print "Flask is < 0.9"
+    print "Flask is < 0.9. Upgrade your Flask installation."
+    print "Exiting..."
+    sys.exit()
 
 
 def get_db():
@@ -34,18 +34,7 @@ def init_tmdb():
     tmdb3.set_locale(config.cfg['LANG'], config.cfg['COUNTRY'])
 
 
-class conditional_decorator(object):
-    def __init__(self, condition):
-        if condition:
-            self.decorator = app.teardown_appcontext
-        else:
-            self.decorator = app.teardown_request
-
-    def __call__(self, func):
-        return self.decorator(func)
-
-
-@conditional_decorator(GREATER09)
+@app.teardown_appcontext
 def close_db_connection(exception):
     """Closes the database again at the end of the request."""
     top = stack.top
