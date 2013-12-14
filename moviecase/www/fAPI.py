@@ -48,14 +48,16 @@ def getMovieList():
         page = int(request.args['page']) if 'page' in request.args else 0
         dbcon = get_db()
         if sort == 'year':
-            R = {'result': 'OK', 'response': getMoviesSortedByYear(dbcon, shortFlag, page)}
+            R = {'result': 'OK', 'response': getMoviesSortedByYear(dbcon, shortFlag, page),
+                 'current_page': page, 'total_count_page': getCountPage(dbcon)}
         elif sort == 'title':
-            R = {'result': 'OK', 'response': getMoviesSortedByTitle(dbcon, shortFlag, page)}
+            R = {'result': 'OK', 'response': getMoviesSortedByTitle(dbcon, shortFlag, page),
+                 'current_page': page, 'total_count_page': getCountPage(dbcon)}
         else:
             R = {'result': 'KO', 'error': 'Bad Request! Check your `sort` parameter.'}
         return jsonify(R)
     else:
-        return jsonify( {'result':'KO','error':'Bad Request!'} )
+        return jsonify({'result': 'KO', 'error': 'Bad Request!'})
 
 
 @app.route('/api/movies/<int:movie_id>', methods=['GET'])

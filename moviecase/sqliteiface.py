@@ -87,6 +87,15 @@ def getMovieByID(dbcon, id):
     return requestFetchOne(dbcon, 'SELECT * FROM movies WHERE movieid = ?', (id,))
 
 
+def getCountPage(dbcon):
+    response = requestFetchOne(dbcon, "SELECT COUNT(*) FROM movies")
+    try:
+        num_rows = response[0]
+    except KeyError:
+        num_rows = response['COUNT(*)']
+    return num_rows//20 + 1
+
+
 def getMovies(dbcon, flag, sort):
     if not flag:
         curs = dbcon.cursor()
