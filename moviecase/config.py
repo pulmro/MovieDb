@@ -14,9 +14,6 @@ class MultiOrderedDict(OrderedDict):
             super(OrderedDict, self).__setitem__(key, value)
 """
 
-"""Start Logging"""
-logging.basicConfig(filename='MovieDb.log', level=logging.INFO,
-                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 cfg = {
     'API_KEY': '22f63eaeba327fde7b8f6f5df3ff3e8f',
@@ -27,7 +24,8 @@ cfg = {
     'SERVERPORT': 8000,
     'LANG': 'en',
     'COUNTRY': 'US',
-    'version': '0.1'
+    'version': '0.1',
+    'LOGFILE': ''
 }
 
 
@@ -43,6 +41,20 @@ except (ParsingError, IOError) as err:
     sys.exit()
 
 settings = ['MOVIEPATH', 'DBPATH', 'LOOPTIME', 'SERVERPORT', 'LANG', 'COUNTRY']
+
+"""
+Start Logging in a file if specified in config, else log to stdoutput
+"""
+try:
+    log_file = parser.get('settings', 'LOGFILE')
+    if log_file:
+        logging.basicConfig(filename=log_file, level=logging.INFO,
+                            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    else:
+        raise
+except:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
 
 for option in settings:
     if parser.has_option('settings', option):

@@ -6,6 +6,7 @@ MOVIEPATH=
 LOOPTIME=3600
 LANG=it
 COUNTRY=it
+LOGFILE=
 
 [blacklist]
 # folder is comma separated list of folder name (in the MOVIEPATH) you want to skip in the search for movie files
