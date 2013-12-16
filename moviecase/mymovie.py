@@ -1,7 +1,9 @@
 #   -*- coding: utf-8 -*-
 
-import tmdb3, thread, os, urllib
+import tmdb3
+import os
 import config
+from poster_engine import PosterDownloadQueue
 
 
 class mymovie():
@@ -18,7 +20,7 @@ class mymovie():
         self.imagefile = ''
         self.tmdbID = 0
 
-    def populate(self, the_movie, poster_size='w500', download_poster=True):
+    def populate(self, the_movie, download_poster=True):
         self.title = the_movie.title
         for person in the_movie.cast:
             self.cast = self.cast + person.name + ': ' + person.character + '; '
@@ -33,25 +35,18 @@ class mymovie():
         if the_movie.releasedate:
             self.year = the_movie.releasedate.year
         if the_movie.poster:
-            urlimage = the_movie.poster.geturl(poster_size)
+            image_url = the_movie.poster.geturl('w185')
             if download_poster:
-                bname = os.path.basename(urlimage)
-                #self.imagefile = config.DBPATH+'/'+bname
+                queue = PosterDownloadQueue()
+                poster_urls = set((the_movie.poster.geturl(size), size) for size in ['w92', 'w185', 'w342'])
+                queue.to_download.update(poster_urls)
+                bname = os.path.basename(image_url)
                 self.imagefile = bname
-                stdoutmutex = thread.allocate_lock()
-                thread.start_new_thread(self.fetchPoster, (urlimage, self.imagefile, self.title, stdoutmutex))
             else:
-                self.imagefile = urlimage
+                self.imagefile = image_url
         self.tmdbID = the_movie.id
-
-    def fetchPoster(self, url, imgfile, movieTitle, mutex):
-        destfile = config.cfg['DBPATH']+'/'+imgfile
-        urllib.urlretrieve(url, destfile)
-        with mutex:
-            print "Downloaded poster for "+self.title.encode('ascii', 'ignore')+': '+imgfile
+        return self
 
 
-def mymovieFromTmdb(the_movie, poster_size, download_poster):
-    m = mymovie()
-    m.populate(the_movie, poster_size, download_poster)
-    return m
+def mymovieFromTmdb(the_movie, download_poster):
+    return mymovie().populate(the_movie, download_poster)
