@@ -28,6 +28,7 @@ cfg = {
     'LOGFILE': ''
 }
 
+verbose = False
 
 try:
     #parser = RawConfigParser(dict_type=MultiOrderedDict)
@@ -45,15 +46,16 @@ settings = ['MOVIEPATH', 'DBPATH', 'LOOPTIME', 'SERVERPORT', 'LANG', 'COUNTRY']
 """
 Start Logging in a file if specified in config, else log to stdoutput
 """
+log_level = logging.INFO if verbose else logging.DEBUG
 try:
     log_file = parser.get('settings', 'LOGFILE')
     if log_file:
-        logging.basicConfig(filename=log_file, level=logging.INFO,
+        logging.basicConfig(filename=log_file, level=log_level,
                             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     else:
         raise
 except:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.basicConfig(level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 
 for option in settings:
@@ -88,7 +90,7 @@ if not os.path.isdir(cfg['CACHEPATH']):
         raise
 
 
-def printCurrentSettings():
+def print_current_settings():
     for key in cfg:
         logging.info("%s : %s", key, cfg[key])
 

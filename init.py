@@ -24,11 +24,13 @@ def usage():
 
 def main(argv):
     try:
-        opts, args = getopt.getopt(argv, "dhcuw", ["help", "clean", "update", "webserver"])
+        opts, args = getopt.getopt(argv, "dhcuwv", ["help", "clean", "update", "webserver", "verbose"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
     for opt, arg in opts:
+        if opt in ("-v", "--verbose"):
+            config.verbose = True
         if opt in ("-h", "--help"):
             usage()
             sys.exit()
@@ -37,11 +39,11 @@ def main(argv):
             mdb.reset_database()
         elif opt in ("-u", "--update"):
             mdb = MovieDb()
-            config.printCurrentSettings()
+            config.print_current_settings()
             mdb.update_database()
         elif opt in ("-d"):
             mdb = MovieDb()
-            config.printCurrentSettings()
+            config.print_current_settings()
             s = sched.scheduler(time.time, time.sleep)
             s.enter(5, 1, mdb.loop, (s, ))
             try:
@@ -51,7 +53,7 @@ def main(argv):
             except KeyboardInterrupt:
                 logging.info("Exiting...")
         elif opt in ("-w", "--webserver"):
-            config.printCurrentSettings()
+            config.print_current_settings()
             logging.info("Starting in server mode only.")
             try:
                 port = int(config.cfg['SERVERPORT'])
