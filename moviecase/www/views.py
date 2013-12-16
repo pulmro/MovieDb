@@ -90,7 +90,7 @@ def cerca():
         try:
             init_tmdb()
             resplist = tmdb3.searchMovie(query.encode('utf-8'))
-            res = [ mymovieFromTmdb(tMovie, 'w154', False) for tMovie in resplist ]
+            res = [mymovieFromTmdb(tMovie, False) for tMovie in resplist]
             #res = [ {'obj':movie, 'urlimage':movie.poster.geturl('w154')} for movie in resplist ]
         except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
             logging.error( "HTTP error({0}): {1}".format(e.httperrno, e.response))
@@ -113,7 +113,7 @@ def edit():
                 # UPDATE files SET movieid=".$movieid." WHERE rowid=".$fid.";
                 boundFileWithMovie(dbcon, fid, mid)
             else:
-                mMovie = mymovieFromTmdb( tmdb3.Movie(tmdbID), 'w500', True)
+                mMovie = mymovieFromTmdb(tmdb3.Movie(tmdbID), True)
                 lastrowid = insertNewMovie(dbcon, mMovie)
                 boundFileWithMovie(dbcon, fid, lastrowid)
                 final_movieid = lastrowid
@@ -125,7 +125,7 @@ def edit():
             else:
                 try:
                     init_tmdb()
-                    mMovie = mymovieFromTmdb(tmdb3.Movie(tmdbID), 'w500', True)
+                    mMovie = mymovieFromTmdb(tmdb3.Movie(tmdbID), True)
                     lastrowid = insertNewMovie(dbcon, mMovie)
                     updateBoundWithMovie(dbcon, mid, lastrowid)
                     removeMovie(dbcon, mid)

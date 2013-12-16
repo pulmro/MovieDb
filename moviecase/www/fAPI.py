@@ -48,14 +48,14 @@ def getMovieList():
         page = int(request.args['page']) if 'page' in request.args else 0
         dbcon = get_db()
         if sort == 'year':
-            R = {'result': 'OK', 'response': getMoviesSortedByYear(dbcon, shortFlag, page),
+            response = {'result': 'OK', 'response': getMoviesSortedByYear(dbcon, shortFlag, page),
                  'current_page': page, 'total_count_page': getCountPage(dbcon)}
         elif sort == 'title':
-            R = {'result': 'OK', 'response': getMoviesSortedByTitle(dbcon, shortFlag, page),
+            response = {'result': 'OK', 'response': getMoviesSortedByTitle(dbcon, shortFlag, page),
                  'current_page': page, 'total_count_page': getCountPage(dbcon)}
         else:
-            R = {'result': 'KO', 'error': 'Bad Request! Check your `sort` parameter.'}
-        return jsonify(R)
+            response = {'result': 'KO', 'error': 'Bad Request! Check your `sort` parameter.'}
+        return jsonify(response)
     else:
         return jsonify({'result': 'KO', 'error': 'Bad Request!'})
 
@@ -64,23 +64,24 @@ def getMovieList():
 def getMovie(movie_id):
     try:
         dbcon = get_db()
-        M = getMovieByID(dbcon, movie_id)
-        if M == None:
-            R = {'result': 'KO', 'error': 'None movie with given id.'}
+        movie = getMovieByID(dbcon, movie_id)
+        if movie is None:
+            response = {'result': 'KO', 'error': 'None movie with given id.'}
         else:
-            R = {'result': 'OK', 'response': M}
+            response = {'result': 'OK', 'response': M}
     except:
-        R = {'result': 'KO', 'error': 'Error retrieving movie'}
-    return jsonify(R)
+        response = {'result': 'KO', 'error': 'Error retrieving movie'}
+    return jsonify(response)
 
 
-@app.route('/api/movies/<int:movie_id>/poster', methods = ['GET'])
+@app.route('/api/movies/<int:movie_id>/poster', methods=['GET'])
 def getPoster(movie_id):
+    size = request.args['size'] if request.args and 'size' in request.args else 'w185'
     try:
         dbcon = get_db()
-        M = getMovieByID(dbcon, movie_id)
-        filename = config.cfg['DBPATH']+'/'+M['imagefile']
-        R = send_file(filename)
+        movie = getMovieByID(dbcon, movie_id)
+        filename = "%s/%s/%s" % (config.cfg['DBPATH'], size, movie['imagefile'])
+        response = send_file(filename)
     except:
-        R = jsonify({'result': 'KO', 'error': 'Error retrieving poster.'})
-    return R
+        response = jsonify({'result': 'KO', 'error': 'Error retrieving poster.'})
+    return response
