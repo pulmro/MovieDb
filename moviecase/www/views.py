@@ -1,4 +1,4 @@
-from flask import render_template, request, redirect, url_for
+from flask import render_template, request, redirect, url_for, abort
 
 
 import logging
@@ -9,6 +9,7 @@ from ..mymovie import *
 from ..sqliteiface import *
 from .. import config
 from . import app
+from exceptions import MovieDbError, DbConnectionError, DbError
 
 try:
     from flask import _app_ctx_stack as stack
@@ -24,7 +25,10 @@ def get_db():
     """Opens a new database connection if there is none yet for the current application context."""
     top = stack.top
     if not hasattr(top, 'sqlite_db'):
-        top.sqlite_db = sqlite_connect(config.cfg['DBFILE'], DICT_FACTORY)
+        try:
+            top.sqlite_db = sqlite_connect(config.cfg['DBFILE'], DICT_FACTORY)
+        except sqlite3.OperationalError as e:
+            raise DbConnectionError(e.message)
     return top.sqlite_db
 
 
@@ -86,18 +90,17 @@ def cerca():
         mid = int(request.form['id']) if 'id' in request.form else 0
         fid = int(request.form['fid']) if 'fid' in request.form else 0
         query = request.form['query'] if 'query' in request.form else ""
-        res = []
         try:
             init_tmdb()
             resplist = tmdb3.searchMovie(query.encode('utf-8'))
             res = [mymovieFromTmdb(tMovie, False) for tMovie in resplist]
-            #res = [ {'obj':movie, 'urlimage':movie.poster.geturl('w154')} for movie in resplist ]
         except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
-            logging.error( "HTTP error({0}): {1}".format(e.httperrno, e.response))
+            logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
+            raise MovieDbError("HTTP error({0}): {1}".format(e.httperrno, e.response))
         except:
-            logging.error( "Unexpected error: %s", sys.exc_info()[0])
-            raise
-        return render_template("cerca.html", movieid = mid, fileid = fid, results = res)
+            logging.error("Unexpected error: %s", sys.exc_info()[0])
+            raise MovieDbError("Unexpected error: %s", sys.exc_info()[0])
+        return render_template("cerca.html", movieid=mid, fileid=fid, results=res)
 
 
 @app.route('/edit', methods=['POST'])
@@ -110,7 +113,6 @@ def edit():
         dbcon = get_db()
         if fid > 0:
             if mid > 0:
-                # UPDATE files SET movieid=".$movieid." WHERE rowid=".$fid.";
                 boundFileWithMovie(dbcon, fid, mid)
             else:
                 mMovie = mymovieFromTmdb(tmdb3.Movie(tmdbID), True)
@@ -132,9 +134,10 @@ def edit():
                     final_movieid = lastrowid
                 except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
                     logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
+                    raise MovieDbError("HTTP error({0}): {1}".format(e.httperrno, e.response))
                 except:
                     logging.error("Unexpected error: %s", sys.exc_info()[0])
-                    raise
+                    raise MovieDbError("Unexpected error: %s", sys.exc_info()[0])
         return redirect(url_for('editmovie', id=final_movieid))
 
 
@@ -159,3 +162,19 @@ def restore():
         dbcon = get_db()
         restoreFile(dbcon, file_id)
     return files()
+
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('404.html'), 404
+
+
+@app.errorhandler(DbError)
+def internal_error(error):
+    get_db().rollback()
+    return render_template('500.html', message=error.message), 500
+
+@app.errorhandler(DbConnectionError)
+def db_connection_error(error):
+    return render_template('500.html', message=error.message), 500
+
