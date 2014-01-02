@@ -61,7 +61,7 @@ class MovieDb():
             for filename in filenames:
                 filepath = unicode(os.path.join(dirname, filename), "utf-8", "ignore")
                 file_type = mimetypes.guess_type(filepath)[0]
-                if file_type is None and m.match(file_type) and not config.is_blacklisted(dirname):
+                if file_type is not None and m.match(file_type) and not config.is_blacklisted(dirname):
                     if filepath in movies_in_db:
                         movies_in_db.pop(filepath)
                     else:
@@ -73,11 +73,11 @@ class MovieDb():
 
     def insert_movie(self, res, path, my_movie):
         the_movie = res[0]
-        movieid = getmoviebyTMDbID(self.db, the_movie.id)
-        if not movieid:
+        movie = getmoviebyTMDbID(self.db, the_movie.id)
+        if not movie:
             my_movie.populate(the_movie)
             movieid = insertNewMovie(self.db, my_movie)
-        linkNewFileToMovie(self.db, path, my_movie.name, movieid)
+        linkNewFileToMovie(self.db, path, my_movie.name, movie[0])
 
     def get_movies(self, new_movies):
         """Search info for movies in new_movies and add them to the db."""
@@ -90,7 +90,7 @@ class MovieDb():
                     words = movie.name.split(' ')
                     strings_to_test = [' '.join(words[0:i]).encode('utf-8') for i in range(len(words), 0, -1)]
                     i = 1
-                    while len(res) == 0:
+                    while len(res) == 0 and i < len(strings_to_test):
                         logging.info("searching for... %s", strings_to_test[i])
                         res = tmdb3.searchMovie(strings_to_test[i])
                         i += 1

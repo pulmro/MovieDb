@@ -69,7 +69,7 @@ def editmovie():
     if movie_id:
         dbcon = get_db()
         movie = getMovieByID(dbcon, movie_id)
-        files = [ os.path.basename(file['filepath']) for file in getFilesByMovieID(dbcon, movie_id) ]
+        files = [os.path.basename(file['filepath']) for file in getFilesByMovieID(dbcon, movie_id)]
         return render_template("editmovie.html", movie=movie, files=files)
 
 
@@ -77,9 +77,9 @@ def editmovie():
 def files():
     dbcon = get_db()
     shortlistmovies = getMoviesSortedByTitle(dbcon, True)
-    orphanfiles = getOrphanFiles(dbcon)
-    removedfiles = getRemovedFiles(dbcon)
-    moviefiles = getBoundFilesWithMovie(dbcon)
+    orphanfiles = get_orphan_files(dbcon)
+    removedfiles = get_removed_files(dbcon)
+    moviefiles = get_bounded_files(dbcon)
     return render_template("files.html", shortlistmovies=shortlistmovies, orphanfiles=orphanfiles,
                            removedfiles=removedfiles, moviefiles=moviefiles)
 
@@ -119,11 +119,12 @@ def edit():
                 lastrowid = insertNewMovie(dbcon, mMovie)
                 boundFileWithMovie(dbcon, fid, lastrowid)
                 final_movieid = lastrowid
+                mMovie.download_poster()
         else:
-            newID = getmoviebyTMDbID(dbcon, tmdbID)
-            if newID:
-                updateBoundWithMovie(dbcon, mid, newID)
-                final_movieid = newID
+            movie = getmoviebyTMDbID(dbcon, tmdbID)
+            if movie and movie['movieid'] != mid:
+                updateBoundWithMovie(dbcon, mid, movie['movieid'])
+                final_movieid = movie['movieid']
             else:
                 try:
                     init_tmdb()
@@ -132,6 +133,7 @@ def edit():
                     updateBoundWithMovie(dbcon, mid, lastrowid)
                     removeMovie(dbcon, mid)
                     final_movieid = lastrowid
+                    mMovie.download_poster()
                 except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
                     logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
                     raise MovieDbError("HTTP error({0}): {1}".format(e.httperrno, e.response))
@@ -178,3 +180,21 @@ def internal_error(error):
 def db_connection_error(error):
     return render_template('500.html', message=error.message), 500
 
+
+def get_removed_files(dbcon):
+    files = getFiles(dbcon, REMOVED_FILE)
+    for f in files:
+        f['basename'] = os.path.basename(f['filepath'])
+    return files
+
+
+def get_bounded_files(dbcon):
+    files = getFiles(dbcon, BOUNDED_FILE)
+    return [({'basename': os.path.basename(file['filepath']), 'rowid': file['rowid']}, getMovieByID(dbcon, file['movieid'])) for file in files]
+
+
+def get_orphan_files(dbcon):
+    files = getFiles(dbcon, ORPHAN_FILE)
+    for f in files:
+        f['basename'] = os.path.basename(f['filepath'])
+    return files

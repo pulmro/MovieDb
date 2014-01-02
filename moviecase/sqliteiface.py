@@ -4,6 +4,10 @@ from mymovie import mymovie
 
 DICT_FACTORY = 1
 
+REMOVED_FILE = -2
+BOUNDED_FILE = 0
+ORPHAN_FILE = -1
+
 
 def dict_factory(cursor, row):
     d = {}
@@ -73,10 +77,7 @@ def getmoviebyfile(dbcon, filepath):
 
 def getmoviebyTMDbID(dbcon, id):
     r = requestFetchOne(dbcon, "SELECT movieid FROM movies WHERE tmdbID = ?", (id,))
-    if r:
-        return r[0]
-    else:
-        return None
+    return r if r else None
 
 
 def getFilesByMovieID(dbcon, id):
@@ -96,17 +97,17 @@ def getCountPage(dbcon):
     return num_rows//20 + 1
 
 
-def getMovies(dbcon, flag, sort):
-    if not flag:
+def getMovies(dbcon, short_flag, sort):
+    if not short_flag:
         curs = dbcon.cursor()
-        R = []
-        for row in curs.execute('SELECT * FROM movies ORDER BY {0}'.format(sort) ):
+        response = []
+        for row in curs.execute('SELECT * FROM movies ORDER BY {0}'.format(sort)):
             if type(row) is dict:
                 files = getFilesByMovieID(dbcon, row['movieid'])
-                row['filesname'] = [ os.path.basename(file['filepath']) for file in files ]
-            R.append(row)
+                row['filesname'] = [os.path.basename(file['filepath']) for file in files]
+            response.append(row)
         curs.close()
-        return R
+        return response
     else:
         return requestFetchAll(dbcon, 'SELECT movieid,title,director FROM movies ORDER BY {0}'.format(sort))
 
@@ -133,23 +134,9 @@ def get5LatestMovies(dbcon):
     return [ getMovieByID(dbcon, id) for id in seq if id not in seen and not seen_add(id) and len(seen)<6 ]
 
 
-def getOrphanFiles(dbcon):
-    files = requestFetchAll(dbcon, 'SELECT rowid,* FROM files WHERE movieid=-1')
-    for f in files:
-        f['basename'] = os.path.basename(f['filepath'])
-    return files
-
-
-def getRemovedFiles(dbcon):
-    files = requestFetchAll(dbcon, 'SELECT rowid,* FROM files WHERE movieid=-2')
-    for f in files:
-        f['basename'] = os.path.basename(f['filepath'])
-    return files
-
-
-def getBoundFilesWithMovie(dbcon):
-    files = requestFetchAll(dbcon, 'SELECT rowid,* FROM files WHERE movieid > 0')
-    return [({'basename': os.path.basename(file['filepath']), 'rowid': file['rowid']}, getMovieByID(dbcon, file['movieid'])) for file in files]
+def getFiles(dbcon, file_type):
+    sql_expr = {REMOVED_FILE: 'movieid = -2', ORPHAN_FILE: 'movieid = -1', BOUNDED_FILE: 'movieid > 0'}
+    return requestFetchAll(dbcon, 'SELECT rowid,* FROM files WHERE {0}'.format(sql_expr[file_type]))
 
 
 def boundFileWithMovie(dbcon, fileid, movieid):
@@ -263,7 +250,8 @@ def linkNewFileToMovie(dbcon, filepath, fname, movieid):
 def updateMoviesByTMDbID(dbcon, mMovie, tmdbID):
     row = makerow(mMovie)
     curs = dbcon.cursor()
-    curs.execute('UPDATE movies SET title=?, director=?, cast=?, overview=?, runtime=?, year=?, morandini=?, imagefile=?, tmdbID=? WHERE tmdbID=?', row+(tmdbID,))
+    curs.execute('UPDATE movies SET title=?, director=?, cast=?, overview=?, runtime=?, year=?, morandini=?,'
+                 'imagefile=?, tmdbID=? WHERE tmdbID=?', row+(tmdbID,))
     dbcon.commit()
     curs.close()
 
