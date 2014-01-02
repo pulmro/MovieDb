@@ -3,14 +3,17 @@ $(document).ready(function() {
 	$('.movielist div.more').hide();
 	$('.movielist ul div.actions').hide();
 	$('.movielist li').hover(
-		function() { $(this).children('div.headline').children('div.actions').show(); },
+		function() { $(this).children('div.headline').children('div.actions').show();},
 		function() { $(this).children('div.headline').children('div.actions').hide(); }
 	);
 	$('.movielist li').click(
 		function() {
 			$(this).children('div.more').animate({opacity: 'toggle', height:'toggle'}, 'slow', 'swing');
+			$('body,html').scroll();
 		}
 	);
+	
+	$('.movielist div.more').children('img').lazyload();
 	
 	$('#dialog').dialog({
 		autoOpen: false,
