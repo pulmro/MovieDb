@@ -69,7 +69,7 @@ def getMovie(movie_id):
 
 @app.route('/api/movies/<int:movie_id>/poster', methods=['GET'])
 def getPoster(movie_id):
-    size = request.args['size'] if request.args and 'size' in request.args else 'w185'
+    size = request.args['size'] if request.args and 'size' in request.args else 'medium'
     dbcon = get_db()
     try:
         movie = getMovieByID(dbcon, movie_id)

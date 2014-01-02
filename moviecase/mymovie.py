@@ -3,7 +3,9 @@
 import tmdb3
 import os
 import config
-from poster_engine import PosterDownloadQueue
+from poster_engine import PosterDownloadQueue, PosterDownloaderThread
+
+dir_for_size = {'w92': 'small', 'w185': 'medium', 'w342': 'large'}
 
 
 class mymovie():
@@ -38,7 +40,8 @@ class mymovie():
             image_url = the_movie.poster.geturl('w185')
             if download_poster:
                 queue = PosterDownloadQueue()
-                poster_urls = set((the_movie.poster.geturl(size), size) for size in ['w92', 'w185', 'w342'])
+                poster_urls = set((the_movie.poster.geturl(size), dir_for_size[size])
+                                  for size in dir_for_size.keys())
                 queue.to_download.update(poster_urls)
                 bname = os.path.basename(image_url)
                 self.imagefile = bname
@@ -46,6 +49,10 @@ class mymovie():
                 self.imagefile = image_url
         self.tmdbID = the_movie.id
         return self
+
+    def download_poster(self):
+        """ Download poster on command"""
+        PosterDownloaderThread(1, "Thread-%d for %s" % (1, self.title), 1).start()
 
 
 def mymovieFromTmdb(the_movie, download_poster):

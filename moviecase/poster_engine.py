@@ -34,11 +34,11 @@ def download_posters(thread_name):
     logging.debug("%s finished downloading posters.", thread_name)
 
 
-def fetch_poster(url, size):
+def fetch_poster(url, size_dir):
     try:
         basename = os.path.basename(url)
-        make_dir(size)
-        dest_file = "%s/%s/%s" % (config.cfg['DBPATH'], size, basename)
+        make_dir(size_dir)
+        dest_file = "%s/%s/%s" % (config.cfg['DBPATH'], size_dir, basename)
         urllib.urlretrieve(url, dest_file)
     except IOError as err:
         logging.exception("Error while downloading %s, %s", url, err)
