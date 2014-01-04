@@ -8,8 +8,9 @@ import sys
 import logging
 import config
 import sched
-from sqliteiface import *
-from mymovie import mymovie, mymovieFromTmdb
+from database import db_session
+from models import Movie, File
+import db_methods
 import poster_engine
 
 NUM_THREADS = 2
@@ -19,8 +20,6 @@ class MovieDb():
 
     def __init__(self):
         self.init_tmdb()
-        #Connecting to local database
-        self.db = sqlite_connect(config.cfg['DBFILE'])
         #Welcome message
         logging.info("MovieDb %s by Emanuele Bigiarini, 2012", config.cfg['version'])
         logging.info("Released under GPL license.")
@@ -55,7 +54,7 @@ class MovieDb():
         logging.info("Scanning files...")
         m = re.compile('video/.*')
         path = config.cfg['MOVIEPATH']
-        movies_in_db = getMoviesPathDict(self.db)
+        movies_in_db = dict(db_session.query(File.filepath, File.id).all())
         newmovies = {}
         for dirname, dirnames, filenames in os.walk(path):
             for filename in filenames:
@@ -67,27 +66,19 @@ class MovieDb():
                     else:
                         logging.info("Found %s", filepath.encode('utf-8'))
                         f_name = unicode(self.filtername(os.path.splitext(filename)[0]), "utf-8", "ignore")
-                        newmovies[filepath] = mymovie(f_name)
+                        newmovies[filepath] = f_name
         #Now movies_in_db just contains the files to be removed from the db
         return newmovies, movies_in_db
-
-    def insert_movie(self, res, path, my_movie):
-        the_movie = res[0]
-        movie = getmoviebyTMDbID(self.db, the_movie.id)
-        if not movie:
-            my_movie.populate(the_movie)
-            movieid = insertNewMovie(self.db, my_movie)
-        linkNewFileToMovie(self.db, path, my_movie.name, movie[0])
 
     def get_movies(self, new_movies):
         """Search info for movies in new_movies and add them to the db."""
         #TODO: implement multi-threaded search for movies
-        for path, movie in new_movies.iteritems():
-            logging.info("searching for... %s", movie.name.encode('utf-8'))
+        for path, movie_name in new_movies.iteritems():
+            logging.info("searching for... %s", movie_name.encode('utf-8'))
             try:
-                res = tmdb3.searchMovie(movie.name.encode('utf-8'))
+                res = tmdb3.searchMovie(movie_name.encode('utf-8'))
                 if len(res) == 0:
-                    words = movie.name.split(' ')
+                    words = movie_name.split(' ')
                     strings_to_test = [' '.join(words[0:i]).encode('utf-8') for i in range(len(words), 0, -1)]
                     i = 1
                     while len(res) == 0 and i < len(strings_to_test):
@@ -95,12 +86,12 @@ class MovieDb():
                         res = tmdb3.searchMovie(strings_to_test[i])
                         i += 1
                 if len(res) == 0:
-                    insertOrphanFile(self.db, path, movie.name)
+                    db_methods.insert_orphan_file(path, movie_name)
                 else:
-                    self.insert_movie(res, path, movie)
+                    db_methods.insert_movie(res, path, movie_name)
             except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
                 logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
-                insertOrphanFile(self.db, path, movie.name)
+                db_methods.insert_orphan_file(path, movie_name)
             except:
                 logging.error("Unexpected error: %s", sys.exc_info()[0])
                 raise
@@ -109,7 +100,13 @@ class MovieDb():
         """Remove movie in movie_dict from the db."""
         for path, idz in movie_dict.iteritems():
             logging.info("removing... %s", path.encode('utf-8'))
-            removeFile(self.db, path)
+            db_session.query(File).filter(File.filepath == path).delete()
+        try:
+            db_session.commit()
+        except:
+            db_session.rollback()
+            logging.error('Error removing files from the database.')
+            raise
 
     def retrieve_posters(self, num_threads):
         for i in xrange(1, num_threads):
@@ -118,20 +115,32 @@ class MovieDb():
 
     def update_database(self):
         """Download again info from TMDB for the movies in the db."""
-        tmdb_ID_list = getTMDbIds(self.db)
-        for (tmdbID,) in tmdb_ID_list:
-            if tmdbID > 0:
-                try:
-                    movie = mymovieFromTmdb(tmdb3.Movie(tmdbID), False)
-                    updateMoviesByTMDbID(self.db, movie, tmdbID)
-                except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
-                    logging.error("Movie not updated.")
-                    logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
-                except:
-                    logging.error("Unexpected error: %s", sys.exc_info()[0])
-                    raise
+        tmdb_ID_list = [movie.tmdbID for movie in db_session.query(Movie).all() if movie.tmdbID > 0]
+        for tmdb_ID in tmdb_ID_list:
+            try:
+                the_movie = tmdb3.Movie(tmdb_ID)
+                movie = Movie.from_tmdb(the_movie, download_poster=False)
+                db_methods.update_movie(tmdb_ID, movie)
+            except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
+                logging.error("Movie not updated.")
+                logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
+            except:
+                logging.error("Unexpected error: %s", sys.exc_info()[0])
+                raise
+        try:
+            db_session.commit()
+        except:
+            db_session.rollback()
+            logging.error('Error updating movies in the database.')
+            raise
 
     def reset_database(self):
         """Clean the db."""
-        reset(self.db)
-        self.db.close()
+        db_session.query(Movie).delete()
+        db_session.query(File).delete()
+        try:
+            db_session.commit()
+        except:
+            db_session.rollback()
+            logging.error('Error cleaning up the database.')
+            raise
