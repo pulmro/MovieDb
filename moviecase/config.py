@@ -24,7 +24,7 @@ cfg = {
     'SERVERPORT': 8000,
     'LANG': 'en',
     'COUNTRY': 'US',
-    'version': '0.1',
+    'version': '0.2',
     'LOGFILE': ''
 }
 
