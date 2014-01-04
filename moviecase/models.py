@@ -8,6 +8,9 @@ from poster_engine import PosterDownloadQueue, PosterDownloaderThread
 
 dir_for_size = {'w92': 'small', 'w185': 'medium', 'w342': 'large'}
 
+ORPHAN_FILE = -1
+REMOVED_FILE = -2
+
 
 class Movie(Base):
     __tablename__ = 'movies'
@@ -21,22 +24,25 @@ class Movie(Base):
     morandini = Column(Text)
     imagefile = Column(String(60))
     tmdbID = Column(Integer)
+    files = relationship("File", backref=backref('movie'), passive_deletes=True)
 
-    def populate(self, the_movie, download_poster=True):
-        self.title = the_movie.title
-        for person in the_movie.cast:
-            self.cast = self.cast + '{0}: {1};'.format(person.name, person.character)
+    def download_poster(self):
+        """ Download poster on command"""
+        PosterDownloaderThread(1, "Thread-%d for %s" % (1, self.title), 1).start()
+
+    @staticmethod
+    def from_tmdb(the_movie, download_poster=True):
+        director = ''
         if len(the_movie.crew) > 0:
             directors = [person.name for person in the_movie.crew if person.job == 'Director']
-            self.director = ','.join(directors)
-        self.overview = the_movie.overview
+            director = ','.join(directors)
+        cast = ';'.join([u'{0}: {1} '.format(person.name, person.character) for person in the_movie.cast])
         #runtime in it_IT locale is not set so we get from the en_US
         #TODO: move to the MovieDb
         tmdb3.set_locale('en', 'US')
-        self.runtime = tmdb3.Movie(the_movie.id).runtime
+        runtime = tmdb3.Movie(the_movie.id).runtime
         tmdb3.set_locale(config.cfg['LANG'], config.cfg['COUNTRY'])
-        if the_movie.releasedate:
-            self.year = the_movie.releasedate.year
+        year = the_movie.releasedate.year if the_movie.releasedate else 0
         if the_movie.poster:
             image_url = the_movie.poster.geturl('w185')
             if download_poster:
@@ -45,19 +51,11 @@ class Movie(Base):
                                   for size in dir_for_size.keys())
                 queue.to_download.update(poster_urls)
                 bname = os.path.basename(image_url)
-                self.imagefile = bname
+                imagefile = bname
             else:
-                self.imagefile = image_url
-        self.tmdbID = the_movie.id
-        return self
-
-    def download_poster(self):
-        """ Download poster on command"""
-        PosterDownloaderThread(1, "Thread-%d for %s" % (1, self.title), 1).start()
-
-    @staticmethod
-    def movie_from_tmdb(the_movie, download_poster):
-        return Movie().populate(the_movie, download_poster)
+                imagefile = image_url
+        return Movie(title=the_movie.title, director=director, cast=cast, overview=the_movie.overview, year=year,
+                     runtime=runtime, imagefile=imagefile, tmdbID=the_movie.id)
 
 
 class File(Base):
@@ -65,5 +63,5 @@ class File(Base):
     id = Column(Integer, primary_key=True)
     filepath = Column(String(512), unique=True)
     name = Column(String(200))
-    movieid = Column(Integer, ForeignKey('movies.movieid'))
-    movie = relationship("Movie", backref=backref('files', order_by=name))
+    movieid = Column(Integer, ForeignKey('movies.movieid', onupdate="cascade", ondelete="SET DEFAULT"),
+                     default=ORPHAN_FILE, server_default='-1', nullable=False)
