@@ -60,6 +60,20 @@ class Movie(Base):
     def __repr__(self):
         return '<Movie %r>' % self.title
 
+    def serialize(self):
+        return {
+            'movieid': self.movieid,
+            'title': self.title,
+            'director': self.director,
+            'cast': self.cast,
+            'overview': self.overview,
+            'runtime': self.runtime,
+            'year': self.year,
+            'morandini': self.morandini,
+            'imagefile': self.imagefile,
+            'tmdbID': self.tmdbID
+        }
+
 
 class File(Base):
     __tablename__ = 'files'
