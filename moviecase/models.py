@@ -57,6 +57,9 @@ class Movie(Base):
         return Movie(title=the_movie.title, director=director, cast=cast, overview=the_movie.overview, year=year,
                      runtime=runtime, imagefile=imagefile, tmdbID=the_movie.id)
 
+    def __repr__(self):
+        return '<Movie %r>' % self.title
+
 
 class File(Base):
     __tablename__ = 'files'
@@ -65,3 +68,15 @@ class File(Base):
     name = Column(String(200))
     movieid = Column(Integer, ForeignKey('movies.movieid', onupdate="cascade", ondelete="SET DEFAULT"),
                      default=ORPHAN_FILE, server_default='-1', nullable=False)
+
+    def __repr__(self):
+        return '<File %r>' % self.filepath
+
+    def set_orphan(self):
+        self.movieid = ORPHAN_FILE
+
+    def set_removed(self):
+        self.movieid = REMOVED_FILE
+
+    def get_basename(self):
+        return os.path.basename(self.filepath)
