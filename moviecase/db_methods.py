@@ -90,6 +90,10 @@ def get_bound_files():
     return db_session.query(File).filter(File.movieid > 0).join("movie").all()
 
 
+def get_count_pages():
+    return Movie.query.count()//20 + 1
+
+
 class NoMovieFound(Exception):
     def __init__(self, message):
         Exception.__init__(self)
