@@ -49,7 +49,7 @@ $(document).ready(function() {
 	<div class="btn close" tip="Chiudi"><img src="../static/images/remove.png"></div>
 	<h3>Modifica file</h3>
 	<p class="filename"></p>
-	<form action='edit.php' method='post'>
+	<form action='edit' method='post'>
 		Seleziona dall'attuale elenco film:
 		<SELECT name="id">
 			<option value="0">Nessuno</option>
@@ -78,10 +78,10 @@ $(document).ready(function() {
 	<ul>
 		{% for file in orphanfiles %}
 		<li><div class="headline">
-			<div class="title"><span style='font-weight:400'>{{file.basename}}</span></div>
+			<div class="title"><span style='font-weight:400'>{{file.get_basename()}}</span></div>
 			<div class="actions">
-				<div class="btn edit" tip='Seleziona un film per il file'><a fid='{{file.rowid}}' fname='{{file.basename}}'><img height=22 src='../static/images/gtk-edit.png'></a></div>
-				<div class="btn" tip='Rimuovi il file dal catalogo'><a href='delete?fid={{file.rowid}}'><img height=22 src='../static/images/remove.png'></a></div>
+				<div class="btn edit" tip='Seleziona un film per il file'><a fid='{{file.id}}' fname='{{file.get_basename()}}'><img height=22 src='../static/images/gtk-edit.png'></a></div>
+				<div class="btn" tip='Rimuovi il file dal catalogo'><a href='delete_file?fid={{file.id}}'><img height=22 src='../static/images/remove.png'></a></div>
 			</div></div>
 		</li>
 		{% endfor %}
@@ -94,9 +94,9 @@ $(document).ready(function() {
 	<ul>
 		{% for file in removedfiles %}
 		<li><div class="headline">
-			<div class="title"><span style='font-weight:400'>{{file.basename}}</span></div>
+			<div class="title"><span style='font-weight:400'>{{file.get_basename()}}</span></div>
 			<div class="actions">
-				<div class='btn' tip='Ripristina il film nel catalogo'><a href='restore?fid={{file.rowid}}'><img height=22 src='../static/images/edit-undo.png'></a></div>
+				<div class='btn' tip='Ripristina il film nel catalogo'><a href='set_orphan?fid={{file.id}}'><img height=22 src='../static/images/edit-undo.png'></a></div>
 			</div></div>
 		</li>
 		{% endfor %}
@@ -109,13 +109,13 @@ $(document).ready(function() {
 	<h4>Files nel catalogo film</h4>
 	
 	<ul>
-		{% for couple in moviefiles %}
+		{% for file in moviefiles %}
 		<li><div class="headline">
-			<div class="title"><span style='font-weight:400'>{{couple[0].basename}}</span></div>
-			<div class="info"><span class='title'>{{couple[1].title}}</span><br> di <i>{{couple[1].director}}</i></div>
+			<div class="title"><span style='font-weight:400'>{{file.get_basename()}}</span></div>
+			<div class="info"><span class='title'>{{file.movie.title}}</span><br> di <i>{{file.movie.director}}</i></div>
 			<div class="actions">
-				<div class='btn' tip='Scheda Film'><a href='editmovie?id={{couple[1].movieid}}'><img src='../static/images/gtk-edit.png'></a></div>
-				<div class='btn' tip='Elimina Film'><a href='delete?id={{couple[1].movieid}}&fid={{couple[0].rowid}}'><img src='../static/images/remove.png'></a></div>
+				<div class='btn' tip='Scheda Film'><a href='editmovie?id={{file.movieid}}'><img src='../static/images/gtk-edit.png'></a></div>
+				<div class='btn' tip='Elimina Film'><a href='set_orphan?fid={{file.id}}'><img src='../static/images/remove.png'></a></div>
 			</div></div>
 		</li>
 		{% endfor %}

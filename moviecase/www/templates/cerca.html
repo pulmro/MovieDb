@@ -16,11 +16,11 @@ $(document).ready(function() {
 <div class="movielist">
 <ul>
 <li><input type="radio" style="margin-right:10px" name="choice" value="-1"><b>Nessuna modifica</b></li>
-{% for mymovie in results %}
+{% for movie in results %}
 <li class="more">
-	<input type="radio" name="choice" value="{{mymovie.tmdbID}}">
-	<img height=150 src='{{mymovie.imagefile}}'><p><b>{{mymovie.title}}</b> ({{mymovie.year}})</p>
-	<p>regia di {{mymovie.director}}</p>
+	<input type="radio" name="choice" value="{{movie.tmdbID}}">
+	<img height=150 src='{{movie.imagefile}}'><p><b>{{movie.title}}</b> ({{movie.year}})</p>
+	<p>regia di {{movie.director}}</p>
 </li>
 {% endfor %}
 </ul>

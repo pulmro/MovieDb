@@ -10,7 +10,7 @@
 		<img height=300 src='../api/movies/{{movie.movieid}}/poster'>
 		<p class="cast">{{movie.cast}}<br>Durata: {{movie.runtime}} min.</p>
 		<p class="overview">{{movie.overview}}</p>
-		<p class="cast">Nome File: {% for file in files %} {{file}} <br> {% endfor %} </p>
+		<p class="cast">Nome File: {% for file in movie.files %} {{file.get_basename()}} <br> {% endfor %} </p>
 	</div>
 </div>
 <div id="cerca">

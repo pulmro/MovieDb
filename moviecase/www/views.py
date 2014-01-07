@@ -4,9 +4,9 @@ from flask import render_template, request, redirect, url_for, abort
 import logging
 import tmdb3
 import sys
-
-from ..mymovie import *
-from ..sqliteiface import *
+from ..models import Movie, File, ORPHAN_FILE, REMOVED_FILE
+from ..database import db_session
+from .. import db_methods
 from .. import config
 from . import app
 from exceptions import MovieDbError, DbConnectionError, DbError
@@ -21,17 +21,6 @@ except ImportError:
     sys.exit()
 
 
-def get_db():
-    """Opens a new database connection if there is none yet for the current application context."""
-    top = stack.top
-    if not hasattr(top, 'sqlite_db'):
-        try:
-            top.sqlite_db = sqlite_connect(config.cfg['DBFILE'], DICT_FACTORY)
-        except sqlite3.OperationalError as e:
-            raise DbConnectionError(e.message)
-    return top.sqlite_db
-
-
 def init_tmdb():
     tmdb3.set_key(config.cfg['API_KEY'])
     tmdb3.set_cache(engine='file', filename=config.cfg['CACHEPATH']+'/.tmdb3cache')
@@ -41,45 +30,44 @@ def init_tmdb():
 @app.teardown_appcontext
 def close_db_connection(exception):
     """Closes the database again at the end of the request."""
-    top = stack.top
-    if hasattr(top, 'sqlite_db'):
-        top.sqlite_db.close()
+    db_session.remove()
 
 
 @app.route('/')
 @app.route('/index')
 def index():
-    dbcon = get_db()
-    latestmovies = get5LatestMovies(dbcon)
+    latestmovies = db_methods.get_latest_movies(5)
     movies = []
     if request.args:
         sort = request.args['sort']
         if sort == 'year':
-            movies = getMoviesSortedByYear(dbcon, False)
+            movies = db_methods.get_movies(sort='title')
         elif sort == 'title':
-            movies = getMoviesSortedByTitle(dbcon, False)
+            movies = db_methods.get_movies(sort='year')
     else:
-        movies = getMoviesSortedByTitle(dbcon, False)
+        movies = db_methods.get_movies(sort='title')
     return render_template("index.html", latestmovies=latestmovies, allmovies=movies)
 
 
 @app.route('/editmovie')
 def editmovie():
-    movie_id = request.args['id']
-    if movie_id:
-        dbcon = get_db()
-        movie = getMovieByID(dbcon, movie_id)
-        files = [os.path.basename(file['filepath']) for file in getFilesByMovieID(dbcon, movie_id)]
-        return render_template("editmovie.html", movie=movie, files=files)
+    try:
+        movie_id = int(request.args['id'])
+    except:
+        raise MovieDbError("Bad request. Check your parameters.", 400)
+    try:
+        movie = db_methods.get_movie(movie_id)
+    except db_methods.NoMovieFound:
+        abort(404)
+    return render_template("editmovie.html", movie=movie)
 
 
 @app.route('/files')
 def files():
-    dbcon = get_db()
-    shortlistmovies = getMoviesSortedByTitle(dbcon, True)
-    orphanfiles = get_orphan_files(dbcon)
-    removedfiles = get_removed_files(dbcon)
-    moviefiles = get_bounded_files(dbcon)
+    shortlistmovies = db_methods.get_movies()
+    orphanfiles = db_methods.get_orphan_files()
+    removedfiles = db_methods.get_removed_files()
+    moviefiles = db_methods.get_bound_files()
     return render_template("files.html", shortlistmovies=shortlistmovies, orphanfiles=orphanfiles,
                            removedfiles=removedfiles, moviefiles=moviefiles)
 
@@ -93,7 +81,7 @@ def cerca():
         try:
             init_tmdb()
             resplist = tmdb3.searchMovie(query.encode('utf-8'))
-            res = [mymovieFromTmdb(tMovie, False) for tMovie in resplist]
+            res = [Movie.from_tmdb(the_movie, False) for the_movie in resplist]
         except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
             logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
             raise MovieDbError("HTTP error({0}): {1}".format(e.httperrno, e.response))
@@ -110,60 +98,81 @@ def edit():
         mid = int(request.form['id']) if 'id' in request.form else 0
         fid = int(request.form['fid']) if 'fid' in request.form else 0
         final_movieid = mid
-        dbcon = get_db()
         if fid > 0:
+            file = File.query.get(fid)
             if mid > 0:
-                boundFileWithMovie(dbcon, fid, mid)
+                file.movieid = mid
             else:
-                mMovie = mymovieFromTmdb(tmdb3.Movie(tmdbID), True)
-                lastrowid = insertNewMovie(dbcon, mMovie)
-                boundFileWithMovie(dbcon, fid, lastrowid)
-                final_movieid = lastrowid
-                mMovie.download_poster()
+                the_movie = tmdb3.Movie(tmdbID)
+                final_movieid = db_methods.insert_movie_file(the_movie, file.filepath, file.name)
         else:
-            movie = getmoviebyTMDbID(dbcon, tmdbID)
-            if movie and movie['movieid'] != mid:
-                updateBoundWithMovie(dbcon, mid, movie['movieid'])
-                final_movieid = movie['movieid']
+            movie = Movie.query.filter(Movie.tmdbID == tmdbID).first()
+            if movie and movie.movieid != mid:
+                final_movieid = movie.movieid
             else:
                 try:
-                    init_tmdb()
-                    mMovie = mymovieFromTmdb(tmdb3.Movie(tmdbID), True)
-                    lastrowid = insertNewMovie(dbcon, mMovie)
-                    updateBoundWithMovie(dbcon, mid, lastrowid)
-                    removeMovie(dbcon, mid)
-                    final_movieid = lastrowid
-                    mMovie.download_poster()
+                    the_movie = tmdb3.Movie(tmdbID)
+                    final_movieid = db_methods.insert_movie(the_movie)
                 except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
                     logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
                     raise MovieDbError("HTTP error({0}): {1}".format(e.httperrno, e.response))
                 except:
                     logging.error("Unexpected error: %s", sys.exc_info()[0])
                     raise MovieDbError("Unexpected error: %s", sys.exc_info()[0])
+            File.query.filter(File.movieid == mid).update({"movieid": final_movieid})
+            Movie.query.filter(Movie.movieid == mid).delete()
+        try:
+            db_session.commit()
+        except:
+            db_session.rollback()
         return redirect(url_for('editmovie', id=final_movieid))
 
 
-@app.route('/delete', methods=['GET'])
+@app.route('/delete_movie', methods=['GET'])
 def delete():
-    if request.args:
-        mid = int(request.args['id']) if 'id' in request.args else 0
-        fid = int(request.args['fid']) if 'fid' in request.args else 0
-        dbcon = get_db()
-        if fid > 0:
-            unboundMovieFile(dbcon, fid, mid)
-            return files()
-        else:
-            removeMovie(dbcon, mid)
-            return redirect(url_for('index'))
+    try:
+        mid = int(request.args['id'])
+    except:
+        raise MovieDbError("Bad request. Check your parameters.", 400)
+    Movie.query.filter(Movie.movieid == mid).delete()
+    try:
+        db_session.commit()
+    except:
+        db_session.rollback()
+    return redirect(url_for('index'))
 
 
-@app.route('/restore')
-def restore():
-    file_id = request.args['fid']
-    if file_id:
-        dbcon = get_db()
-        restoreFile(dbcon, file_id)
+@app.route('/delete_file', methods=['GET'])
+def delete_file():
+    try:
+        fid = int(request.args['fid'])
+    except:
+        raise MovieDbError("Bad request. Check your parameters.", 400)
+    try:
+        File.query.get(fid).set_removed()
+        db_session.commit()
+    except:
+        db_session.rollback()
     return files()
+
+
+@app.route('/set_orphan')
+def set_orphan():
+    try:
+        file_id = request.args['fid']
+    except:
+        raise MovieDbError("Bad request. Check your parameters.", 400)
+    try:
+        File.query.get(file_id).set_orphan()
+        db_session.commit()
+    except:
+        db_session.rollback()
+    return files()
+
+
+@app.errorhandler(MovieDbError)
+def bad_request(error):
+    return render_template('400.html', message=error.message), 400
 
 
 @app.errorhandler(404)
@@ -173,28 +182,10 @@ def not_found(error):
 
 @app.errorhandler(DbError)
 def internal_error(error):
-    get_db().rollback()
+    db_session.rollback()
     return render_template('500.html', message=error.message), 500
+
 
 @app.errorhandler(DbConnectionError)
 def db_connection_error(error):
     return render_template('500.html', message=error.message), 500
-
-
-def get_removed_files(dbcon):
-    files = getFiles(dbcon, REMOVED_FILE)
-    for f in files:
-        f['basename'] = os.path.basename(f['filepath'])
-    return files
-
-
-def get_bounded_files(dbcon):
-    files = getFiles(dbcon, BOUNDED_FILE)
-    return [({'basename': os.path.basename(file['filepath']), 'rowid': file['rowid']}, getMovieByID(dbcon, file['movieid'])) for file in files]
-
-
-def get_orphan_files(dbcon):
-    files = getFiles(dbcon, ORPHAN_FILE)
-    for f in files:
-        f['basename'] = os.path.basename(f['filepath'])
-    return files
