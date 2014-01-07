@@ -25,7 +25,8 @@ cfg = {
     'LANG': 'en',
     'COUNTRY': 'US',
     'version': '0.2',
-    'LOGFILE': ''
+    'LOGFILE': '',
+    'TESTING': False
 }
 
 verbose = False
