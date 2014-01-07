@@ -88,7 +88,7 @@ class MovieDb():
                 if len(res) == 0:
                     db_methods.insert_orphan_file(path, movie_name)
                 else:
-                    db_methods.insert_movie(res, path, movie_name)
+                    db_methods.insert_movie_file(res, path, movie_name)
             except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
                 logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
                 db_methods.insert_orphan_file(path, movie_name)
