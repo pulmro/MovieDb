@@ -1,28 +1,10 @@
 from flask import request, jsonify, send_file, g, _app_ctx_stack
 
-from ..sqliteiface import *
 from .. import config
 from . import app
+from ..database import db_session
+from .. import db_methods
 from exceptions import ApiDbConnectionError, ApiBadRequest, ApiNotFound
-
-
-def get_db():
-    """Opens a new database connection if there is none yet for the current application context."""
-    top = _app_ctx_stack.top
-    if not hasattr(top, 'sqlite_db'):
-        try:
-            top.sqlite_db = sqlite_connect(config.cfg['DBFILE'], DICT_FACTORY)
-        except sqlite3.OperationalError as e:
-            raise ApiDbConnectionError(e.message)
-    return top.sqlite_db
-
-
-@app.teardown_appcontext
-def close_db_connection(exception):
-    """Closes the database again at the end of the request."""
-    top = _app_ctx_stack.top
-    if hasattr(top, 'sqlite_db'):
-        top.sqlite_db.close()
 
 
 @app.route('/api/serverinfo', methods=['GET'])
@@ -32,25 +14,23 @@ def getServerInfo():
 
 @app.route('/api/recentmovies', methods=['GET'])
 def getRecentMovies():
-    dbcon = get_db()
-    return jsonify({'result': 'OK', 'response': get5LatestMovies(dbcon)})
+    return jsonify({'result': 'OK', 'response': db_methods.get_latest_movies(5)})
 
 
 @app.route('/api/movies', methods=['GET'])
 def getMovieList():
     try:
-        shortFlag = bool(request.args['short'][0])
+        #shortFlag = bool(request.args['short'][0])
         sort = request.args['sort']
     except:
         raise ApiBadRequest("Check your parameters: short=true|false, page=num_page, sort=title|year")
     page = int(request.args['page']) if 'page' in request.args else 0
-    dbcon = get_db()
     if sort == 'year':
-        response = {'result': 'OK', 'response': getMoviesSortedByYear(dbcon, shortFlag, page),
-                    'current_page': page, 'total_count_page': getCountPage(dbcon)}
+        response = {'result': 'OK', 'response': [mov.serialize() for mov in db_methods.get_movies(page, sort='year')],
+                    'current_page': page, 'total_count_page': db_methods.get_count_pages()}
     elif sort == 'title':
-        response = {'result': 'OK', 'response': getMoviesSortedByTitle(dbcon, shortFlag, page),
-                    'current_page': page, 'total_count_page': getCountPage(dbcon)}
+        response = {'result': 'OK', 'response': [mov.serialize() for mov in db_methods.get_movies(page)],
+                    'current_page': page, 'total_count_page': db_methods.get_count_pages()}
     else:
         raise ApiBadRequest("Check your `sort` parameter.")
     return jsonify(response)
@@ -58,11 +38,10 @@ def getMovieList():
 
 @app.route('/api/movies/<int:movie_id>', methods=['GET'])
 def getMovie(movie_id):
-    dbcon = get_db()
-    movie = getMovieByID(dbcon, movie_id)
-    if movie is not None:
-        response = {'result': 'OK', 'response': movie}
-    else:
+    try:
+        movie = db_methods.get_movie(movie_id)
+        response = {'result': 'OK', 'response': movie.serialize()}
+    except:
         raise ApiNotFound("None movie with given id.")
     return jsonify(response)
 
@@ -70,13 +49,12 @@ def getMovie(movie_id):
 @app.route('/api/movies/<int:movie_id>/poster', methods=['GET'])
 def getPoster(movie_id):
     size = request.args['size'] if request.args and 'size' in request.args else 'medium'
-    dbcon = get_db()
     try:
-        movie = getMovieByID(dbcon, movie_id)
-        filename = "%s/%s/%s" % (config.cfg['DBPATH'], size, movie['imagefile'])
+        movie = db_methods.get_movie(movie_id)
+        filename = "%s/%s/%s" % (config.cfg['DBPATH'], size, movie.imagefile)
         response = send_file(filename)
     except:
-        raise ApiNotFound("Error retrieving poster: {0}".format(movie['imagefile']))
+        raise ApiNotFound("Error retrieving poster: {0}".format(movie.imagefile))
     return response
 
 
