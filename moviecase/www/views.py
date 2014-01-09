@@ -41,9 +41,9 @@ def index():
     if request.args:
         sort = request.args['sort']
         if sort == 'year':
-            movies = db_methods.get_movies(sort='title')
-        elif sort == 'title':
             movies = db_methods.get_movies(sort='year')
+        elif sort == 'title':
+            movies = db_methods.get_movies(sort='title')
     else:
         movies = db_methods.get_movies(sort='title')
     return render_template("index.html", latestmovies=latestmovies, allmovies=movies)
@@ -156,10 +156,10 @@ def delete_file():
     return files()
 
 
-@app.route('/set_orphan')
+@app.route('/set_orphan', methods=['GET'])
 def set_orphan():
     try:
-        file_id = request.args['fid']
+        file_id = int(request.args['fid'])
     except:
         raise MovieDbError("Bad request. Check your parameters.", 400)
     try:
