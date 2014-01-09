@@ -27,7 +27,7 @@ def insert_movie_file(the_movie, path, movie_name):
     try:
         file = db_session.query(File).filter(File.filepath == path).one()
     except NoResultFound:
-        file = File(filpath=path, name=movie_name, movieid=movie.movieid)
+        file = File(filepath=path, name=movie_name, movieid=movie.movieid)
         db_session.add(file)
     else:
         file.movieid = movie.movieid
@@ -40,7 +40,7 @@ def insert_movie_file(the_movie, path, movie_name):
 
 
 def insert_orphan_file(path, movie_name):
-    file = File(filpath=path, name=movie_name, movieid=ORPHAN_FILE)
+    file = File(filepath=path, name=movie_name, movieid=ORPHAN_FILE)
     db_session.add(file)
     try:
         db_session.commit()
@@ -59,15 +59,16 @@ def update_movie(tmdb_id, movie):
 
 
 def get_latest_movies(limit):
-    statement = db_session.query(File).group_by(File.movieid).order_by('id DESC').limit(limit).subquery()
+    statement = db_session.query(File).filter(File.movieid > 0).group_by(File.movieid)\
+        .order_by('id DESC').limit(limit).subquery()
     return db_session.query(Movie).join(statement, Movie.movieid == statement.c.movieid).all()
 
 
 def get_movies(page=0, sort='title'):
     if page > 0:
-        return db_session.query(Movie).order_by(sort).slice(20*(page-1), 20*page).all()
+        return db_session.query(Movie).filter(Movie.movieid > 0).order_by(sort).slice(20*(page-1), 20*page).all()
     else:
-        return db_session.query(Movie).order_by(sort).all()
+        return db_session.query(Movie).filter(Movie.movieid > 0).order_by(sort).all()
 
 
 def get_movie(movie_id):

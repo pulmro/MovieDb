@@ -43,6 +43,7 @@ class Movie(Base):
         runtime = tmdb3.Movie(the_movie.id).runtime
         tmdb3.set_locale(config.cfg['LANG'], config.cfg['COUNTRY'])
         year = the_movie.releasedate.year if the_movie.releasedate else 0
+        imagefile = ''
         if the_movie.poster:
             image_url = the_movie.poster.geturl('w185')
             if download_poster:

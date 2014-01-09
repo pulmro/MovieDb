@@ -8,7 +8,7 @@ import sys
 import logging
 import config
 import sched
-from database import db_session
+from database import db_session, init_db
 from models import Movie, File
 import db_methods
 import poster_engine
@@ -19,10 +19,11 @@ NUM_THREADS = 2
 class MovieDb():
 
     def __init__(self):
-        self.init_tmdb()
         #Welcome message
         logging.info("MovieDb %s by Emanuele Bigiarini, 2012", config.cfg['version'])
         logging.info("Released under GPL license.")
+        self.init_tmdb()
+        init_db()
 
     @staticmethod
     def init_tmdb():
@@ -88,7 +89,7 @@ class MovieDb():
                 if len(res) == 0:
                     db_methods.insert_orphan_file(path, movie_name)
                 else:
-                    db_methods.insert_movie_file(res, path, movie_name)
+                    db_methods.insert_movie_file(res[0], path, movie_name)
             except tmdb3.tmdb_exceptions.TMDBHTTPError as e:
                 logging.error("HTTP error({0}): {1}".format(e.httperrno, e.response))
                 db_methods.insert_orphan_file(path, movie_name)
@@ -109,7 +110,7 @@ class MovieDb():
             raise
 
     def retrieve_posters(self, num_threads):
-        for i in xrange(1, num_threads):
+        for i in xrange(1, num_threads + 1):
             thread = poster_engine.PosterDownloaderThread(i, "Thread-%d" % i, i)
             thread.start()
 
