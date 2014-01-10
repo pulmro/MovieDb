@@ -46,7 +46,8 @@ class MovieDb():
             logging.info("Some new actions to run")
         self.get_movies(new_movies)
         self.remove_movies(deleted_movies)
-        self.retrieve_posters(NUM_THREADS)
+        if poster_engine.PosterDownloadQueue().to_download:
+            self.retrieve_posters(NUM_THREADS)
         scheduler.enter(config.cfg['LOOPTIME'], 1, self.loop, (scheduler,))
         logging.info("Scanning in %d", config.cfg['LOOPTIME'])
 
