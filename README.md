@@ -7,6 +7,16 @@ It has also a server running a minimal REST api to interact with it.
 It's written in python and now it uses CherryPy and Flask (>=0.9) for the internal server and web interface respectively.
 It's born essentially as an experiment to improve my python (and php once upon) skills and as a need to handle my movie collection files stored in my home sheevaplug server and shared with roommates.
 
+It needs:
+
+* PyTMDB3 ( [pytmdb3](https://github.com/wagnerrp/pytmdb3) )
+
+* CherryPy
+
+* Flask (>= 0.9)
+
+* SQLAlchemy
+
 Screenshots of the web gui:
 
 <div style="float:left">
